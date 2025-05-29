@@ -1,0 +1,5 @@
+**/target/
+chromedriver.exe
+/Cargo.lock
+/frontend/status.json
+run.bat

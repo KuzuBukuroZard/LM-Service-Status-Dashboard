@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大模型供应商服务状态检测</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>大模型供应商服务状态检测</h1>
+        <div class="timestamp-container">
+            <div class="file-timestamp">
+                数据更新时间: 
+                <span id="last-updated" title="--:--:--">--:--:--</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="refreshButton">刷新状态</button>
+            <div class="loading-indicator" id="loadingIndicator" style="display: none;">
+                <div class="spinner"></div>
+                <span>正在获取状态...</span>
+            </div>
+        </div>
+    </header>
+    <main id="status-container">
+        <!-- 状态卡片 -->
+    </main>
+
+    <footer>
+        <p class="note">
+            <strong>注意：</strong>状态数据每5分钟自动更新一次，如果本页面未更新，也可以直接点击名字来访问对应供应商的状态监测网站。<br>
+            2025 KuzuBukuroZard. All right reserved.
+        </p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
