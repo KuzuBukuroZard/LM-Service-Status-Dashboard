@@ -1,4 +1,4 @@
-use std::{fs, time::Duration};
+use std::fs;
 use chrono::Utc;
 use tokio::time;
 use axum::{
@@ -8,29 +8,28 @@ use axum::{
 };
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
+mod config;
 mod fetcher;
 mod models;
+mod google;
 
-/// 状态文件路径
-const STATUS_FILE: &str = "frontend/status.json";
-/// 前端服务端口
-const FRONTEND_PORT: u16 = 5959;
+use config::CONFIG;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    fs::create_dir_all("frontend").expect("创建前端目录失败");
+    fs::create_dir_all(CONFIG.frontend_dir).expect("创建前端目录失败");
     
     println!("🔄 启动大模型供应商状态监控服务...");
-    println!("📂 状态文件将保存到: {}", STATUS_FILE);
-    println!("🌐 前端服务将在 http://localhost:{} 启动", FRONTEND_PORT);
+    println!("📂 状态文件将保存到: {}", CONFIG.status_file);
+    println!("🌐 前端服务将在 {} 启动", CONFIG.local_url());
     
     // 初始运行
     fetch_and_save().await;
     
     // 启动后台数据获取任务
     tokio::spawn(async {
-        let mut interval = time::interval(Duration::from_secs(300));
+        let mut interval = time::interval(CONFIG.refresh_interval());
         loop {
             interval.tick().await;
             fetch_and_save().await;
@@ -47,23 +46,23 @@ async fn start_web_server() {
         // 特殊处理status.json，添加防缓存头
         .route("/status.json", get(serve_status_json))
         // 服务整个frontend目录的所有其他文件
-        .nest_service("/", get_service(ServeDir::new("frontend")))
+        .nest_service("/", get_service(ServeDir::new(CONFIG.frontend_dir)))
         .layer(CorsLayer::permissive());
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", FRONTEND_PORT))
+    let listener = tokio::net::TcpListener::bind(CONFIG.server_address())
         .await
         .expect("绑定端口失败");
         
-    println!("✅ 前端服务已启动: http://localhost:{}", FRONTEND_PORT);
+    println!("✅ 前端服务已启动: {}", CONFIG.local_url());
     
     axum::serve(listener, app)
         .await
         .expect("启动Web服务器失败");
 }
 
-/// 提供status.json文件（带防缓存头）
+/// 提供status.json文件
 async fn serve_status_json() -> Result<([(header::HeaderName, &'static str); 2], String), StatusCode> {
-    match fs::read_to_string(STATUS_FILE) {
+    match fs::read_to_string(CONFIG.status_file) {
         Ok(content) => {
             Ok((
                 [
@@ -87,7 +86,7 @@ async fn fetch_and_save() {
         "data": results
     });
     
-    if let Err(e) = fs::write(STATUS_FILE, serde_json::to_string_pretty(&output).unwrap()) {
+    if let Err(e) = fs::write(CONFIG.status_file, serde_json::to_string_pretty(&output).unwrap()) {
         eprintln!("❌ 写入状态文件失败: {}", e);
     } else {
         println!("✅ 状态已保存到文件");
